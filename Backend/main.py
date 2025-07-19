@@ -1,12 +1,12 @@
 import os
                         #---File-Mangement-Fucntions---#
 """
-new_file()
-open_file()
-save_file()
-save_as_file()
-close_file()
-exit_application()
+new_file()-done
+open_file()-done
+save_file()-done
+save_as_file()-waiting for ui
+close_file()-waiting for ui
+exit_application()-wating for ui
 """
 
 files_dir = './files'
@@ -32,3 +32,14 @@ def save_file(filename:str):
     file = open(f'{filename}','w')
     file.write(f'{written_text}')
     file.close()
+
+
+def save_as_file(filename:str):
+    pass #will implement this later when the ui is created
+
+def close_file(filename:str):
+    pass
+    #will implement this later when the ui is created
+
+def exit_appilcataion():
+    pass# will implement this when the ui is created
