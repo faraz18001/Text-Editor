@@ -24,6 +24,11 @@ def open_file(filename: str):
             return f.read()
     else:
         raise FileNotFoundError(f"File '{filename}' not found in {files_dir}")
-        
-        
 
+
+
+written_text='faraz'       #Leaving this for now becuase the text will come from front-end
+def save_file(filename:str):
+    file = open(f'{filename}','w')
+    file.write(f'{written_text}')
+    file.close()
