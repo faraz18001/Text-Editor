@@ -37,8 +37,22 @@ def starts_with(trie: dict, prefix: str) -> bool:
 
     return True
 
-#trie = create_trie()
+
 #
 #
                     ##--Training and Inserting Words inside the trie----##
 word_list = words.words()#this has around 27500 words
+
+
+
+def train_trie(trie: dict, word_list:list):
+
+    for word in word_list:
+        insert(trie, word)
+
+    return trie
+
+
+
+trie = train_trie(create_trie(), word_list)
+
