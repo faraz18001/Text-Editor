@@ -41,12 +41,13 @@ def starts_with(trie: dict, prefix: str) -> bool:
 #
 #
                     ##--Training and Inserting Words inside the trie----##
-word_list = words.words()#this has around 27500 words
 
 
 
+word_list = words.words()
 def train_trie(trie: dict, word_list:list):
-
+    # Runtime Complexity: O(N * M) where N is the number of words and M is the average length of words
+    # Space Complexity: O(N * M) for storing all words in the trie structure
     for word in word_list:
         insert(trie, word)
 
@@ -56,3 +57,12 @@ def train_trie(trie: dict, word_list:list):
 
 trie = train_trie(create_trie(), word_list)
 
+
+"""print(f"Number of words in trie: {len(word_list)}")
+print(f"Search for 'hello': {search(trie, 'hello')}")
+print(f"Search for 'world': {search(trie, 'world')}")
+print(f"Search for 'python': {search(trie, 'python')}")
+print(f"Search for 'nonexistentword': {search(trie, 'nonexistentword')}")
+print(f"Starts with 'hel': {starts_with(trie, 'hel')}")
+print(f"Starts with 'wor': {starts_with(trie, 'wor')}")
+print(f"Starts with 'xyz': {starts_with(trie, 'xyz')}")"""
