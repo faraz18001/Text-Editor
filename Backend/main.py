@@ -1,5 +1,5 @@
 import os
-                        #---File-Mangement-Fucntions---#
+                    #---File-Mangement-Fucntions---#
 """
 new_file()-done
 open_file()-done
@@ -34,8 +34,6 @@ def save_file(filename:str):
     file.close()
 
 
-def save_as_file(filename:str):
-    pass #will implement this later when the ui is created
 
 def close_file(filename:str):
     pass
