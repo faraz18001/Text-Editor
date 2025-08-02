@@ -1,7 +1,7 @@
 from nltk.corpus import words
 import nltk
 
-from emoji_data import word_to_emoji  # or whatever you named your dictionary
+from emoji_data import word_to_emoji
 nltk.download("words")
 
 END_OF_WORD = "*"
@@ -144,18 +144,12 @@ def autocomplete(trie: dict, prefix: str, max_suggestions: int = 10):
 
     return suggestions
 
-def precidc_emoji(prefix:str):
-    word_to_emoji = {
-        "happy": "😊1",
-        "sad": "😢",
-        "love": "❤️",
-        "fire": "🔥"
-    }
 
-    return word_to_emoji[prefix]
-
-
-
+"""
+1.this function is the same as exact the insert on.
+2.but just there is difference of 1 line which is that we are
+3.checking if the end of the word is a emoji.
+"""
 def insert_emoji(trie: dict, word: str,emoji:str):
     current_node = trie
     for character in word.lower():
@@ -180,6 +174,58 @@ def train_emoji_trie(trie: dict, emoji_mappings: dict):
         insert_emoji(trie, word, emoji)
     return trie
 
+def get_all_emojis_from_node(node: dict, prefix: str, max_suggestions: int = 10):
+    suggestions = []
+
+    def collect_emoji_words(current_node, current_word):
+        if len(suggestions) >= max_suggestions:
+            return
+
+        if END_OF_WORD in current_node:
+            emoji = current_node[END_OF_WORD]
+            suggestions.append((current_word, emoji))
+
+        for char, child_node in current_node.items():
+            if char != END_OF_WORD and len(suggestions) < max_suggestions:
+                collect_emoji_words(child_node, current_word + char)
+
+    collect_emoji_words(node, prefix)
+    return suggestions
+
+def starts_with_emoji(trie: dict, prefix: str) -> bool:
+    current_node = trie
+    for character in prefix.lower():
+        if character not in current_node:
+            return False
+        current_node = current_node[character]
+    return True
+
+def get_node_at_prefix_emoji(trie: dict, prefix: str):
+    current_node = trie
+    for character in prefix.lower():
+        if character not in current_node:
+            return None
+        current_node = current_node[character]
+    return current_node
+
+def autocomplete_emoji(trie: dict, prefix: str, max_suggestions: int = 10):
+    suggestions = []
+
+    if not starts_with_emoji(trie, prefix):
+        return suggestions
+
+    prefix_node = get_node_at_prefix_emoji(trie, prefix)
+    if prefix_node is None:
+        return suggestions
+
+    suggestions = get_all_emojis_from_node(prefix_node, prefix.lower(), max_suggestions)
+
+    return suggestions
+
+emoji_trie = train_emoji_trie(create_trie(), word_to_emoji)
 
 res=precidc_emoji('happy')
 print(res)
+
+emoji_results = autocomplete_emoji(emoji_trie, "ha", 5)
+print("Emoji autocomplete results:", emoji_results)
