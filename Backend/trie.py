@@ -1,7 +1,7 @@
-from enum import auto
 from nltk.corpus import words
 import nltk
 
+from emoji_data import word_to_emoji  # or whatever you named your dictionary
 nltk.download("words")
 
 END_OF_WORD = "*"
@@ -23,11 +23,13 @@ def create_trie():
 """
 def insert(trie: dict, word: str):
     current_node = trie
-    for character in word:
+    for character in word.lower():
         if character not in current_node:
             current_node[character] = {}
         current_node = current_node[character]
     current_node[END_OF_WORD] = True
+
+
 
 """
 1.again grab the root node.
@@ -36,7 +38,6 @@ def insert(trie: dict, word: str):
 4.else move down, one by one check each character and once you have found all the letters inside ther tree
 5.you must have hit the end of the word tombstone, so return True that means the word exists.
 """
-
 def search(trie: dict, word: str) -> bool:
     current_node = trie
     for character in word:
@@ -60,7 +61,6 @@ def starts_with(trie: dict, prefix: str) -> bool:
         current_node = current_node[character]
     return True
 
-    # Training and Inserting Words inside the trie
 
 """
 1.oky so here i used nltk libray which is in python
@@ -85,6 +85,12 @@ def get_node_at_prefix(trie: dict, prefix: str):
             return None
         current_node = current_node[character]
     return current_node
+"""
+1.okay this function uses recursin specifically the collect words functions
+2.the base case for this function is that when ever we our suggestions list hit the lenght of max_suggestion.
+3.we return back to the function which called the collected words functions.
+4.
+"""
 
 def get_all_words_from_node(node: dict, prefix: str, max_suggestions: int = 10):
     suggestions = []
@@ -121,14 +127,14 @@ trie = train_trie(create_trie(), word_list)
 def autocomplete(trie: dict, prefix: str, max_suggestions: int = 10):
     """
     Autocomplete function that uses existing helper functions:
-    1. First use starts_with() to check if prefix exists
-    2. Use get_node_at_prefix() to navigate to the prefix location
-    3. Use get_all_words_from_node() to collect completions
+    1. first use starts_with() to check if prefix exists
+    2. use get_node_at_prefix() to navigate to the prefix location
+    3. use get_all_words_from_node() to collect completions
     """
     suggestions = []
 
     if not starts_with(trie, prefix):
-        return suggestions  # Return empty list if prefix doesn't exist
+        return suggestions
 
     prefix_node = get_node_at_prefix(trie, prefix)
     if prefix_node is None:
@@ -138,6 +144,42 @@ def autocomplete(trie: dict, prefix: str, max_suggestions: int = 10):
 
     return suggestions
 
+def precidc_emoji(prefix:str):
+    word_to_emoji = {
+        "happy": "😊1",
+        "sad": "😢",
+        "love": "❤️",
+        "fire": "🔥"
+    }
 
-res = autocomplete(trie, "comput", 10)
-print("Autocomplete results:", res)
+    return word_to_emoji[prefix]
+
+
+
+def insert_emoji(trie: dict, word: str,emoji:str):
+    current_node = trie
+    for character in word.lower():
+        if character not in current_node:
+            current_node[character] = {}
+        current_node = current_node[character]
+    current_node[END_OF_WORD] = emoji
+
+def search_emoji(trie: dict, word: str) -> bool:
+    current_node = trie
+    for character in word.lower():
+        if character not in current_node:
+            return ''
+        current_node = current_node[character]
+    if  END_OF_WORD in current_node:
+        return current_node[END_OF_WORD]
+    else:
+        return ''
+
+def train_emoji_trie(trie: dict, emoji_mappings: dict):
+    for word, emoji in emoji_mappings.items():
+        insert_emoji(trie, word, emoji)
+    return trie
+
+
+res=precidc_emoji('happy')
+print(res)
