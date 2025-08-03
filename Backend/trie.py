@@ -5,7 +5,7 @@
 from nltk.corpus import words
 import nltk
 from emoji_data import word_to_emoji
-import string
+
 
 # Download the necessary NLTK data.
 # Note: The original code downloads this every time.
@@ -313,27 +313,62 @@ def analyze_sentence_punctuation(punct_trie: dict, sentence: str):
             found_punctuation.append((char, punct_name))
     return found_punctuation
 
+# ==============================================================================
+# 7. ABBREVIATION EXPANSION (INTEGRATED INTO STANDARD TRIE)
+# ==============================================================================
+
+def search_and_expand(trie: dict, word: str) -> str:
+    """
+    Searches for a word in the trie.
+    - If the word is an abbreviation, returns its expansion.
+    - If the word is a standard word, returns the word itself.
+    - If the word is not found, returns the word itself.
+
+    This function handles both regular words (marked with True) and
+    abbreviations (marked with their string expansion).
+    """
+    current_node = trie
+    # Clean the word of potential surrounding punctuation for a better lookup
+    # and convert to lowercase as the trie is case-insensitive.
+    lookup_word = word.lower().strip('.,!?;:"\'()[]{}')
+
+    for character in lookup_word:
+        if character not in current_node:
+            return word  # Word not in trie, return original
+        current_node = current_node[character]
+
+    if END_OF_WORD in current_node:
+        value = current_node[END_OF_WORD]
+        # If the value is a string, it's an expansion.
+        if isinstance(value, str):
+            return value
+        # Otherwise, it's a regular word (value is True), so return original.
+        else:
+            return word
+    else:
+        # It's a prefix but not a complete word in our trie.
+        return word
+
+
+def expand_abbreviations_in_sentence(trie: dict, sentence: str) -> str:
+    """
+    Processes a sentence, expanding any known abbreviations found in the trie.
+    """
+    words_in_sentence = sentence.split()
+
+    expanded_words = []
+    for w in words_in_sentence:
+        expanded_words.append(search_and_expand(trie, w))
+
+    return " ".join(expanded_words)
+
+
+
+
+
+
 
 # ==============================================================================
 # 6. DATA LOADING, TRIE TRAINING, AND EXECUTION
 # ==============================================================================
 
-# --- Load Data Sources ---
-"""
-1.oky so here i used nltk libray which is in python
-2.it has over 87500 words.
-3.the list down, downloads the list and stroe it inside a python list
-"""
-word_list = words.words()
-
-
-# --- Train the Standard Word Trie ---
-trie = train_trie(create_trie(), word_list)
-
-
-# --- Train the Emoji Trie ---
-emoji_trie = train_emoji_trie(create_trie(), word_to_emoji)
-
-
-# --- Train the Punctuation Trie (NEW) ---
-punctuation_trie = train_punctuation_trie(create_trie())
