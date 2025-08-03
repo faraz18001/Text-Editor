@@ -1,147 +1,199 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, colorchooser, messagebox, font
 
-# --- Constants remain the same ---
-BG_COLOR = "#F7F7F7"
-TOOLBAR_COLOR = "#EEEEEE"
-FONT_FAMILY = "Segoe UI"
-FONT_SIZE = 10
+root = tk.Tk()
+root.title("Fixed Text Editor")
+root.geometry("900x600")
 
-# --- Helper functions for creating individual buttons ---
+# ===== Default formatting state for new text =====
+default_format = {
+    "family": "Arial",
+    "size": 14,
+    "bold": False,
+    "italic": False,
+    "underline": False,
+    "strike": False,
+    "color": "#FFFFFF"
+}
 
-def create_toolbar_button(parent, text, command):
-    """Creates a styled TEXT button and places it in the parent."""
-    button = tk.Button(
-        parent,
-        text=text,
-        command=command,
-        font=(FONT_FAMILY, FONT_SIZE, "bold"),
-        bg=TOOLBAR_COLOR,
-        relief=tk.FLAT,
-        bd=0,
-        width=3,
-        activebackground="#D0D0D0"
-    )
-    button.pack(side=tk.LEFT, padx=2, pady=2)
-    return button
+# Numbering state
+number_counter = 1
 
-def create_toolbar_radiobutton(parent, text, variable, value, command):
-    """Creates a styled TEXT radiobutton and places it in the parent."""
-    radio_btn = tk.Radiobutton(
-        parent,
-        text=text,
-        variable=variable,
-        value=value,
-        command=command,
-        font=(FONT_FAMILY, FONT_SIZE, "bold"),
-        indicatoron=0,
-        bg=TOOLBAR_COLOR,
-        selectcolor="#C0C0C0",
-        relief=tk.FLAT,
-        bd=0,
-        width=3,
-        activebackground="#D0D0D0"
-    )
-    radio_btn.pack(side=tk.LEFT, padx=2, pady=2)
-    return radio_btn
+# Track where typing starts for fixing last-char bug
+last_insert_index = None
 
-# --- Main functions to build the UI ---
+# ===== Functions =====
+def apply_format_tags(start, end):
+    """Apply the current default formatting as tags to the given range."""
+    f = font.Font(family=default_format["family"],
+                  size=default_format["size"],
+                  weight="bold" if default_format["bold"] else "normal",
+                  slant="italic" if default_format["italic"] else "roman",
+                  underline=1 if default_format["underline"] else 0,
+                  overstrike=1 if default_format["strike"] else 0)
 
-def create_toolbar(parent, state, callbacks):
-    """Creates the entire top toolbar."""
-    toolbar_frame = tk.Frame(parent, bg=TOOLBAR_COLOR, bd=1, relief=tk.SOLID)
-    toolbar_frame.pack(side=tk.TOP, fill=tk.X, padx=2, pady=(2, 0))
+    tag_name = (f"font_{default_format['family']}{default_format['size']}"
+                f"{default_format['bold']}{default_format['italic']}"
+                f"{default_format['underline']}_{default_format['strike']}")
 
-    # Style Dropdown
-    style_options = ["Paragraph", "Heading 1", "Heading 2", "Heading 3"]
-    state["style_var"] = tk.StringVar(value=style_options[0])
-    style_dropdown = ttk.Combobox(
-        toolbar_frame,
-        textvariable=state["style_var"],
-        values=style_options,
-        width=15,
-        font=(FONT_FAMILY, FONT_SIZE),
-        state="readonly"
-    )
-    style_dropdown.pack(side=tk.LEFT, padx=5, pady=5)
+    text.tag_configure(tag_name, font=f)
+    text.tag_add(tag_name, start, end)
 
-    # Buttons
-    create_toolbar_button(toolbar_frame, "B", callbacks["on_bold"])
-    create_toolbar_button(toolbar_frame, "I", callbacks["on_italic"])
-    create_toolbar_button(toolbar_frame, "U", callbacks["on_underline"])
+    color_tag = f"color_{default_format['color']}"
+    text.tag_configure(color_tag, foreground=default_format["color"])
+    text.tag_add(color_tag, start, end)
 
-    # Separator
-    ttk.Separator(toolbar_frame, orient='vertical').pack(side=tk.LEFT, padx=5, pady=5, fill='y')
+def before_typing(event):
+    global last_insert_index
+    last_insert_index = text.index("insert")
 
-    # Alignment Radiobuttons
-    create_toolbar_radiobutton(toolbar_frame, "L", state["align_var"], "left", callbacks["on_align"])
-    create_toolbar_radiobutton(toolbar_frame, "C", state["align_var"], "center", callbacks["on_align"])
-    create_toolbar_radiobutton(toolbar_frame, "R", state["align_var"], "right", callbacks["on_align"])
+def after_typing(event):
+    if not last_insert_index:
+        return
+    root.after_idle(lambda: apply_format_tags(last_insert_index, "insert"))
 
-    return toolbar_frame
+def handle_enter(event=None):
+    global number_counter
+    current_line_num = int(text.index("insert").split(".")[0])
+    prev_line_text = text.get(f"{current_line_num - 1}.0", f"{current_line_num - 1}.end")
 
-def create_text_area(parent):
-    """Creates the main text editing area."""
-    text_area = tk.Text(
-        parent,
-        wrap=tk.WORD,
-        font=(FONT_FAMILY, 12),
-        bd=0,
-        relief=tk.FLAT,
-        padx=10,
-        pady=10
-    )
-    text_area.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-    text_area.insert(tk.END, "Type your text here...")
-    return text_area
+    # Continue bullet
+    if prev_line_text.strip().startswith("•"):
+        text.insert("insert", "\n• ")
+        return "break"
 
-# --- Main Application Logic ---
+    # Continue numbering
+    first_word = prev_line_text.strip().split(" ")[0]
+    if first_word.replace(".", "").isdigit():
+        try:
+            num = int(first_word.replace(".", "")) + 1
+        except ValueError:
+            num = number_counter
+        text.insert("insert", f"\n{num}. ")
+        number_counter = num
+        return "break"
 
-def main():
-    """Initializes the application and runs the main loop."""
-    root = tk.Tk()
-    root.title("Functional Text Editor")
-    root.geometry("700x500")
-    root.configure(bg=BG_COLOR)
+    return None
 
-    # This dictionary holds the application's state, replacing `self`.
-    app_state = {
-        "align_var": tk.StringVar(value="left"),
-        "style_var": None,
-        "text_area": None
-    }
+def toggle_format(attr):
+    try:
+        start, end = text.index(tk.SEL_FIRST), text.index(tk.SEL_LAST)
+        default_format[attr] = not default_format[attr]
+        apply_format_tags(start, end)
+    except tk.TclError:
+        default_format[attr] = not default_format[attr]
 
-    # Define callback functions here so they have access to `app_state`.
-    # This is a 'closure'.
-    def on_bold_click():
-        print("Bold button clicked!")
-        # Example: to access the text area, you would use app_state['text_area']
+def toggle_bold(): toggle_format("bold")
+def toggle_italic(): toggle_format("italic")
+def toggle_underline(): toggle_format("underline")
+def toggle_strike(): toggle_format("strike")
 
-    def on_italic_click():
-        print("Italic button clicked!")
+def change_font_family(event=None):
+    try:
+        start, end = text.index(tk.SEL_FIRST), text.index(tk.SEL_LAST)
+        default_format["family"] = font_var.get()
+        apply_format_tags(start, end)
+    except tk.TclError:
+        default_format["family"] = font_var.get()
 
-    def on_underline_click():
-        print("Underline button clicked!")
+def change_font_size(event=None):
+    try:
+        start, end = text.index(tk.SEL_FIRST), text.index(tk.SEL_LAST)
+        default_format["size"] = size_var.get()
+        apply_format_tags(start, end)
+    except tk.TclError:
+        default_format["size"] = size_var.get()
 
-    def on_align_click():
-        alignment = app_state["align_var"].get()
-        print(f"Alignment set to: {alignment}")
+def adjust_font_size(delta):
+    size_var.set(max(6, size_var.get() + delta))
+    change_font_size()
 
-    # A dictionary to hold the callback functions for easy passing.
-    callbacks = {
-        "on_bold": on_bold_click,
-        "on_italic": on_italic_click,
-        "on_underline": on_underline_click,
-        "on_align": on_align_click
-    }
+def change_color():
+    color = colorchooser.askcolor(title="Pick a color")[1]
+    if color:
+        try:
+            start, end = text.index(tk.SEL_FIRST), text.index(tk.SEL_LAST)
+            default_format["color"] = color
+            apply_format_tags(start, end)
+        except tk.TclError:
+            default_format["color"] = color
 
-    # Create the UI components
-    create_toolbar(root, app_state, callbacks)
-    # Store the created text_area in our state dictionary so callbacks can use it
-    app_state["text_area"] = create_text_area(root)
+def toggle_bullet():
+    line_start = f"{text.index(tk.INSERT).split('.')[0]}.0"
+    line_text = text.get(line_start, f"{line_start} lineend")
+    if line_text.strip().startswith("•"):
+        text.delete(line_start, f"{line_start}+2c")
+    else:
+        text.insert(line_start, "• ")
 
-    root.mainloop()
+def toggle_numbering():
+    global number_counter
+    line_start = f"{text.index(tk.INSERT).split('.')[0]}.0"
+    line_text = text.get(line_start, f"{line_start} lineend")
+    if line_text.strip().split(" ")[0].replace(".", "").isdigit():
+        text.delete(line_start, f"{line_start}+4c")
+    else:
+        text.insert(line_start, f"{number_counter}. ")
+        number_counter += 1
 
-# --- Entry point of the script ---
-if __name__ == "__main__":
-    main()
+def undo():
+    try:
+        text.edit_undo()
+    except tk.TclError:
+        messagebox.showinfo("Undo", "Nothing left to undo.")
+
+def redo():
+    try:
+        text.edit_redo()
+    except tk.TclError:
+        messagebox.showinfo("Redo", "Nothing left to redo.")
+
+# ===== Toolbar =====
+toolbar = tk.Frame(root, bg="#333333")
+toolbar.pack(side=tk.TOP, fill=tk.X)
+
+# Font family dropdown
+fonts_list = sorted(list(font.families()))
+font_var = tk.StringVar(value=default_format["family"])
+font_dropdown = tk.OptionMenu(toolbar, font_var, *fonts_list, change_font_family)
+font_dropdown.pack(side=tk.LEFT, padx=2, pady=2)
+
+# Font size dropdown
+size_var = tk.IntVar(value=default_format["size"])
+sizes = list(range(8, 73, 2))
+size_dropdown = tk.OptionMenu(toolbar, size_var, *sizes, change_font_size)
+size_dropdown.pack(side=tk.LEFT, padx=2, pady=2)
+
+# Increase/Decrease size
+tk.Button(toolbar, text="A+", command=lambda: adjust_font_size(1)).pack(side=tk.LEFT, padx=2)
+tk.Button(toolbar, text="A-", command=lambda: adjust_font_size(-1)).pack(side=tk.LEFT, padx=2)
+
+# Formatting buttons
+tk.Button(toolbar, text="B", command=toggle_bold).pack(side=tk.LEFT, padx=2)
+tk.Button(toolbar, text="I", command=toggle_italic).pack(side=tk.LEFT, padx=2)
+tk.Button(toolbar, text="U", command=toggle_underline).pack(side=tk.LEFT, padx=2)
+tk.Button(toolbar, text="S", command=toggle_strike).pack(side=tk.LEFT, padx=2)
+
+# Color button
+tk.Button(toolbar, text="Color", command=change_color).pack(side=tk.LEFT, padx=2)
+
+# Bullets & numbering
+tk.Button(toolbar, text="•", command=toggle_bullet).pack(side=tk.LEFT, padx=2)
+tk.Button(toolbar, text="1.", command=toggle_numbering).pack(side=tk.LEFT, padx=2)
+
+# Undo / Redo
+tk.Button(toolbar, text="Undo", command=undo).pack(side=tk.LEFT, padx=2)
+tk.Button(toolbar, text="Redo", command=redo).pack(side=tk.LEFT, padx=2)
+
+# ===== Text widget =====
+text = tk.Text(root, wrap="word", undo=True,
+               bg="#1E1E1E", fg=default_format["color"],
+               insertbackground="white")
+text.pack(fill=tk.BOTH, expand=True)
+
+# Bindings
+text.bind("<KeyPress>", before_typing)
+text.bind("<KeyRelease>", after_typing)
+text.bind("<Return>", handle_enter)
+
+root.mainloop()
